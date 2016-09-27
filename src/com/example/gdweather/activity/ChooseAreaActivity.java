@@ -5,6 +5,8 @@ import java.util.List;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.KeyEvent;
@@ -50,12 +52,28 @@ public class ChooseAreaActivity extends Activity {
 
 	private int currentLevel = LEVEL_PROVINCE;// 当前处于那个级别
 
+	private boolean isFromWeatherActivity;// 标记是否从weatheractivity页面返回来的
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.choose_area);
+		isFromWeatherActivity = getIntent().getBooleanExtra(
+				"from_weather_activity", false);// 获取到这个字段值看是不是从那边过来的
+		// 直接调转到天气详情页
+		SharedPreferences sp = this.getSharedPreferences("weather",
+				MODE_PRIVATE);
+		if (sp.getBoolean("city_selected", false) && !isFromWeatherActivity) {
+			// sp文件有城市信息并不是从weatheractivity页面跳过来的
+			// 比如应用刚启动
+			Intent intent = new Intent(this, WeatherActivity.class);
+			// intent.putExtra("county_code", sp.getString("", defValue))
+			startActivity(intent);
+			finish();
+			return;
+		}
 		listView = (ListView) findViewById(R.id.list_view);
 		textView = (TextView) findViewById(R.id.title_tv);
 		adapter = new ArrayAdapter<String>(this,
@@ -92,10 +110,16 @@ public class ChooseAreaActivity extends Activity {
 					LogUtil.i(TAG,
 							"最后一个层级,单击的是：" + selectedCounty.getCountyName()
 									+ "/" + selectedCounty.getCountyCode());
+					Intent intent = new Intent(ChooseAreaActivity.this,
+							WeatherActivity.class);
+					intent.putExtra("county_code",
+							selectedCounty.getCountyCode());
+					startActivity(intent);
+					finish();
 				}
 			}
 		});
-		queryProvinces();
+		queryProvinces();// 加载省级数据
 	}
 
 	/**
@@ -186,6 +210,7 @@ public class ChooseAreaActivity extends Activity {
 			@Override
 			public void onError(Exception e) {
 				// TODO Auto-generated method stub
+
 				ChooseAreaActivity.this.runOnUiThread(new Runnable() {
 
 					@Override
@@ -282,6 +307,10 @@ public class ChooseAreaActivity extends Activity {
 			queryProvinces();
 
 		} else {
+			if (isFromWeatherActivity) {
+				// 如果是从weatheractivity跳过来的
+				startActivity(new Intent(this, WeatherActivity.class));
+			}
 			finish();
 		}
 	}
